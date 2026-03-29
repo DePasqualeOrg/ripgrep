@@ -240,7 +240,21 @@ pub fn is_readable_stdin() -> bool {
         is_readable
     }
 
-    #[cfg(not(any(unix, windows)))]
+    #[cfg(target_os = "wasi")]
+    fn imp() -> bool {
+        // WASI doesn't expose Unix-style file type metadata for stdin, so we
+        // can't distinguish pipes from regular files. The is_terminal() guard
+        // in the caller already filtered out terminal stdin, so returning true
+        // here means "non-terminal stdin is assumed readable."
+        log::debug!(
+            "for heuristic stdin detection on WASI, \
+             file type introspection is not available, \
+             so assuming non-terminal stdin is readable"
+        );
+        true
+    }
+
+    #[cfg(not(any(unix, windows, target_os = "wasi")))]
     fn imp() -> bool {
         log::debug!("on non-{{Unix,Windows}}, assuming stdin is not readable");
         false
